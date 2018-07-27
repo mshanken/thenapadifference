@@ -1,4 +1,4 @@
-# Enter Site name here Promo mini site
+# The Napa Difference, A Promo/Ad mini site
 
 A new promotional site.
 
