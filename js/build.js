@@ -14308,8 +14308,261 @@ return jQuery;
 })));
 //# sourceMappingURL=bootstrap.js.map
 
-(function () {
-  "use strict";
+/*!
+ * JavaScript Cookie v2.2.0
+ * https://github.com/js-cookie/js-cookie
+ *
+ * Copyright 2006, 2015 Klaus Hartl & Fagner Brack
+ * Released under the MIT license
+ */
+;(function (factory) {
+	var registeredInModuleLoader = false;
+	if (typeof define === 'function' && define.amd) {
+		define(factory);
+		registeredInModuleLoader = true;
+	}
+	if (typeof exports === 'object') {
+		module.exports = factory();
+		registeredInModuleLoader = true;
+	}
+	if (!registeredInModuleLoader) {
+		var OldCookies = window.Cookies;
+		var api = window.Cookies = factory();
+		api.noConflict = function () {
+			window.Cookies = OldCookies;
+			return api;
+		};
+	}
+}(function () {
+	function extend () {
+		var i = 0;
+		var result = {};
+		for (; i < arguments.length; i++) {
+			var attributes = arguments[ i ];
+			for (var key in attributes) {
+				result[key] = attributes[key];
+			}
+		}
+		return result;
+	}
 
-  console.log("loaded...");
-})($);
+	function init (converter) {
+		function api (key, value, attributes) {
+			var result;
+			if (typeof document === 'undefined') {
+				return;
+			}
+
+			// Write
+
+			if (arguments.length > 1) {
+				attributes = extend({
+					path: '/'
+				}, api.defaults, attributes);
+
+				if (typeof attributes.expires === 'number') {
+					var expires = new Date();
+					expires.setMilliseconds(expires.getMilliseconds() + attributes.expires * 864e+5);
+					attributes.expires = expires;
+				}
+
+				// We're using "expires" because "max-age" is not supported by IE
+				attributes.expires = attributes.expires ? attributes.expires.toUTCString() : '';
+
+				try {
+					result = JSON.stringify(value);
+					if (/^[\{\[]/.test(result)) {
+						value = result;
+					}
+				} catch (e) {}
+
+				if (!converter.write) {
+					value = encodeURIComponent(String(value))
+						.replace(/%(23|24|26|2B|3A|3C|3E|3D|2F|3F|40|5B|5D|5E|60|7B|7D|7C)/g, decodeURIComponent);
+				} else {
+					value = converter.write(value, key);
+				}
+
+				key = encodeURIComponent(String(key));
+				key = key.replace(/%(23|24|26|2B|5E|60|7C)/g, decodeURIComponent);
+				key = key.replace(/[\(\)]/g, escape);
+
+				var stringifiedAttributes = '';
+
+				for (var attributeName in attributes) {
+					if (!attributes[attributeName]) {
+						continue;
+					}
+					stringifiedAttributes += '; ' + attributeName;
+					if (attributes[attributeName] === true) {
+						continue;
+					}
+					stringifiedAttributes += '=' + attributes[attributeName];
+				}
+				return (document.cookie = key + '=' + value + stringifiedAttributes);
+			}
+
+			// Read
+
+			if (!key) {
+				result = {};
+			}
+
+			// To prevent the for loop in the first place assign an empty array
+			// in case there are no cookies at all. Also prevents odd result when
+			// calling "get()"
+			var cookies = document.cookie ? document.cookie.split('; ') : [];
+			var rdecode = /(%[0-9A-Z]{2})+/g;
+			var i = 0;
+
+			for (; i < cookies.length; i++) {
+				var parts = cookies[i].split('=');
+				var cookie = parts.slice(1).join('=');
+
+				if (!this.json && cookie.charAt(0) === '"') {
+					cookie = cookie.slice(1, -1);
+				}
+
+				try {
+					var name = parts[0].replace(rdecode, decodeURIComponent);
+					cookie = converter.read ?
+						converter.read(cookie, name) : converter(cookie, name) ||
+						cookie.replace(rdecode, decodeURIComponent);
+
+					if (this.json) {
+						try {
+							cookie = JSON.parse(cookie);
+						} catch (e) {}
+					}
+
+					if (key === name) {
+						result = cookie;
+						break;
+					}
+
+					if (!key) {
+						result[name] = cookie;
+					}
+				} catch (e) {}
+			}
+
+			return result;
+		}
+
+		api.set = api;
+		api.get = function (key) {
+			return api.call(api, key);
+		};
+		api.getJSON = function () {
+			return api.apply({
+				json: true
+			}, [].slice.call(arguments));
+		};
+		api.defaults = {};
+
+		api.remove = function (key, attributes) {
+			api(key, '', extend(attributes, {
+				expires: -1
+			}));
+		};
+
+		api.withConverter = init;
+
+		return api;
+	}
+
+	return init(function () {});
+}));
+
+/*!
+ * Simple Age Verification (https://github.com/Herudea/age-verification))
+ */
+
+var modal_content,
+modal_screen;
+
+// Start Working ASAP.
+$(document).ready(function() {
+	av_legality_check();
+});
+
+
+av_legality_check = function() {
+	if (Cookies.get('is_legal') != "yes") {
+		av_showmodal();
+		// Make sure the prompt stays in the middle.
+		$(window).on('resize', av_positionPrompt);
+	}
+};
+
+av_showmodal = function() {
+	console.log('av_showmodal');
+	modal_screen = $('<div id="modal_screen"></div>');
+	modal_content = $('<div id="modal_content" style="display:none"></div>');
+	var modal_content_wrapper = $('<div id="modal_content_wrapper" class="content_wrapper"></div>');
+	var modal_regret_wrapper = $('<div id="modal_regret_wrapper" class="content_wrapper" style="display:none;"></div>');
+
+	// Question Content
+	var content_heading = $('<h2>Are you 21 or older?</h2>');
+	var content_buttons = $('<nav><ul><li><a href="#nothing" class="av_btn av_go" rel="yes">Yes</a></li><li><a href="#nothing" class="av_btn av_no" rel="no">No</a></li></nav>');
+	var content_text = $('<p>You must verify that you are 21 years of age or older to enter this site.</p>');
+
+	// Regret Content
+	var regret_heading = $('<h2>We\'re Sorry!</h2>');
+	var regret_buttons = $('<nav><small>I hit the wrong button!</small> <ul><li><a href="#nothing" class="av_btn av_go" rel="yes">I\'m old enough!</a></li></ul></nav>');
+	var regret_text = $('<p>You must be 21 years of age or older to enter this site.</p>');
+
+	modal_content_wrapper.append(content_heading, content_buttons, content_text);
+	modal_regret_wrapper.append(regret_heading, regret_buttons, regret_text);
+	modal_content.append(modal_content_wrapper, modal_regret_wrapper);
+
+	// Append the prompt to the end of the document
+	$('body').append(modal_screen, modal_content);
+
+	// Center the box
+	av_positionPrompt();
+
+	modal_content.find('a.av_btn').on('click', av_setCookie);
+};
+
+av_setCookie = function(e) {
+	e.preventDefault();
+
+	var is_legal = $(e.currentTarget).attr('rel');
+
+	Cookies.set('is_legal', is_legal, {
+		expires: 30,
+		path: '/'
+	});
+
+	if (is_legal == "yes") {
+		av_closeModal();
+		$(window).off('resize');
+	} else {
+		av_showRegret();
+	}
+};
+
+av_closeModal = function() {
+	modal_content.fadeOut();
+	modal_screen.fadeOut();
+};
+
+av_showRegret = function() {
+	modal_screen.addClass('nope');
+	modal_content.find('#modal_content_wrapper').hide();
+	modal_content.find('#modal_regret_wrapper').show();
+};
+
+av_positionPrompt = function() {
+	var top = ($(window).outerHeight() - $('#modal_content').outerHeight()) / 2;
+	var left = ($(window).outerWidth() - $('#modal_content').outerWidth()) / 2;
+	modal_content.css({
+		'top': top,
+		'left': left
+	});
+
+	if (modal_content.is(':hidden') && (Cookies.get('is_legal') != "yes")) {
+		modal_content.fadeIn('slow')
+	}
+};
